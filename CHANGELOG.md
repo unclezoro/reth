@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.0.0
+The Reth is entering production-ready v1.0.0. Thanks to the Paradigm team for their continuous iterations on Reth, 
+providing the community with a highly scalable, modular, high-performance, and feature-rich client. 
+We stand on the shoulders of giants, enabling us to swiftly launch the Reth supporting BSC and opBNB network versions.
+
+### BUGFIX
+* [\#75](https://github.com/bnb-chain/reth/pull/75) ci: fix release job
+* [\#76](https://github.com/bnb-chain/reth/pull/76) chore: update max db size 
+* [\#74](https://github.com/bnb-chain/reth/pull/74) fix: add sidecars to db when doing insert_block 
+* [\#79](https://github.com/bnb-chain/reth/pull/79) fix: read sidecars from table in get_take_block_range
+* [\#81](https://github.com/bnb-chain/reth/pull/81) fix: check parent hash of disconnected headers 
+* [\#83](https://github.com/bnb-chain/reth/pull/83) fix: parlia live sync issue
+* [\#89](https://github.com/bnb-chain/reth/pull/89) fix: fork block handling in parlia engine and rewinding blocks to the block before the finalized block issue
+
+### Docs
+* [\#87](https://github.com/bnb-chain/reth/pull/87) chore: refine readme file
+* [\#90](https://github.com/bnb-chain/reth/pull/90) doc: fix op-reth running tutorial
+
+
 ## v1.0.0-rc.2
 
 This release is a release candidate for the v1.0.0 release. It includes a number of new features and bug fixes.
