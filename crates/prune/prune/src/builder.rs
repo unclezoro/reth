@@ -88,6 +88,7 @@ impl PrunerBuilder {
                 Primitives = <PF::ProviderRW as NodePrimitivesProvider>::Primitives,
             >,
     {
+        let static_file_path = Some(provider_factory.static_file_provider().path().to_path_buf());
         let segments =
             SegmentSet::from_components(provider_factory.static_file_provider(), self.segments);
 
@@ -98,6 +99,7 @@ impl PrunerBuilder {
             self.delete_limit,
             self.timeout,
             self.finished_exex_height,
+            static_file_path,
         )
     }
 
@@ -112,6 +114,7 @@ impl PrunerBuilder {
             + BlockReader<Transaction: Encodable2718>
             + PruneCheckpointWriter,
     {
+        let static_file_path = Some(static_file_provider.path().to_path_buf());
         let segments = SegmentSet::<Provider>::from_components(static_file_provider, self.segments);
 
         Pruner::new(
@@ -120,6 +123,7 @@ impl PrunerBuilder {
             self.delete_limit,
             self.timeout,
             self.finished_exex_height,
+            static_file_path,
         )
     }
 }

@@ -12,7 +12,7 @@ use reth_downloaders::{bodies::noop::NoopBodiesDownloader, headers::noop::NoopHe
 use reth_evm::{execute::BlockExecutorProvider, noop::NoopBlockExecutorProvider};
 use reth_node_builder::{NodeTypes, NodeTypesWithDBAdapter};
 use reth_node_core::{
-    args::{DatabaseArgs, DatadirArgs},
+    args::{DatabaseArgs, DatadirArgs, PerformanceOptimizationArgs},
     dirs::{ChainPath, DataDirPath},
 };
 use reth_provider::{
@@ -52,6 +52,10 @@ pub struct EnvironmentArgs<C: ChainSpecParser> {
     /// All database related arguments
     #[command(flatten)]
     pub db: DatabaseArgs,
+
+    /// All performance optimization related arguments
+    #[command(flatten)]
+    pub performance_optimization: PerformanceOptimizationArgs,
 }
 
 impl<C: ChainSpecParser> EnvironmentArgs<C> {
@@ -157,6 +161,7 @@ impl<C: ChainSpecParser> EnvironmentArgs<C> {
                     NoopBlockExecutorProvider::<N::Primitives>::default(),
                     config.stages.clone(),
                     prune_modes.clone(),
+                    self.performance_optimization.skip_state_root_validation,
                 ))
                 .build(factory.clone(), StaticFileProducer::new(factory.clone(), prune_modes));
 

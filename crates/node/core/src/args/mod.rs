@@ -64,5 +64,9 @@ pub use engine::EngineArgs;
 mod ress_args;
 pub use ress_args::RessArgs;
 
+/// PerformanceOptimizationArgs struct for configuring performance optimization
+mod performance_optimization;
+pub use performance_optimization::PerformanceOptimizationArgs;
+
 mod error;
 pub mod types;

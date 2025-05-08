@@ -81,6 +81,7 @@ where
         mode: MiningMode,
         payload_attributes_builder: B,
         evm_config: C,
+        skip_state_root_validation: bool,
     ) -> Self
     where
         B: PayloadAttributesBuilder<<N::Payload as PayloadTypes>::PayloadAttributes>,
@@ -108,6 +109,7 @@ where
                 invalid_block_hook,
                 engine_kind,
                 evm_config,
+                skip_state_root_validation,
             );
 
         let handler = EngineApiRequestHandler::new(to_tree_tx, from_tree);

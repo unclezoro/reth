@@ -90,6 +90,7 @@ where
         invalid_block_hook: Box<dyn InvalidBlockHook<N::Primitives>>,
         sync_metrics_tx: MetricEventsSender,
         evm_config: C,
+        skip_state_root_validation: bool,
     ) -> Self
     where
         V: EngineValidator<N::Payload, Block = BlockTy<N>>,
@@ -118,6 +119,7 @@ where
                 invalid_block_hook,
                 engine_kind,
                 evm_config,
+                skip_state_root_validation
             );
 
         let engine_handler = EngineApiRequestHandler::new(to_tree_tx, from_tree);
@@ -226,6 +228,7 @@ mod tests {
             Box::new(NoopInvalidBlockHook::default()),
             sync_metrics_tx,
             evm_config,
+            false,
         );
     }
 }

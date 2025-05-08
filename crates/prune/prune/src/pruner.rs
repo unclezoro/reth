@@ -10,10 +10,17 @@ use reth_provider::{
     DBProvider, DatabaseProviderFactory, PruneCheckpointReader, PruneCheckpointWriter,
 };
 use reth_prune_types::{PruneProgress, PrunedSegmentInfo, PrunerOutput};
+use reth_static_file_types::{find_fixed_range, StaticFileSegment, DEFAULT_BLOCKS_PER_STATIC_FILE};
 use reth_tokio_util::{EventSender, EventStream};
-use std::time::{Duration, Instant};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    time::{Duration, Instant},
+};
 use tokio::sync::watch;
 use tracing::debug;
+
+pub(crate) const RECENT_BLOCKS_KEPT: usize = 1000;
 
 /// Result of [`Pruner::run`] execution.
 pub type PrunerResult = Result<PrunerOutput, PrunerError>;
@@ -43,6 +50,8 @@ pub struct Pruner<Provider, PF> {
     timeout: Option<Duration>,
     /// The finished height of all `ExEx`'s.
     finished_exex_height: watch::Receiver<FinishedExExHeight>,
+    /// The path to the static file.
+    static_file_path: Option<PathBuf>,
     #[doc(hidden)]
     metrics: Metrics,
     event_sender: EventSender<PrunerEvent>,
@@ -56,6 +65,7 @@ impl<Provider> Pruner<Provider, ()> {
         delete_limit: usize,
         timeout: Option<Duration>,
         finished_exex_height: watch::Receiver<FinishedExExHeight>,
+        static_file_path: Option<PathBuf>,
     ) -> Self {
         Self {
             provider_factory: (),
@@ -65,6 +75,7 @@ impl<Provider> Pruner<Provider, ()> {
             delete_limit,
             timeout,
             finished_exex_height,
+            static_file_path,
             metrics: Metrics::default(),
             event_sender: Default::default(),
         }
@@ -83,6 +94,7 @@ where
         delete_limit: usize,
         timeout: Option<Duration>,
         finished_exex_height: watch::Receiver<FinishedExExHeight>,
+        static_file_path: Option<PathBuf>,
     ) -> Self {
         Self {
             provider_factory,
@@ -92,6 +104,7 @@ where
             delete_limit,
             timeout,
             finished_exex_height,
+            static_file_path,
             metrics: Metrics::default(),
             event_sender: Default::default(),
         }
@@ -141,6 +154,8 @@ where
 
         let (stats, deleted_entries, output) =
             self.prune_segments(provider, tip_block_number, &mut limiter)?;
+
+        self.prune_ancient_blocks(provider, tip_block_number);
 
         self.previous_tip_block_number = Some(tip_block_number);
 
@@ -314,6 +329,80 @@ where
             }
         }
     }
+
+    /// Prunes ancient static files from the static file provider.
+    pub fn prune_ancient_blocks(&self, _provider: &Provider, tip_block_number: BlockNumber) {
+        if RECENT_BLOCKS_KEPT == 0 {
+            return
+        }
+
+        let Some(ref static_file_path) = self.static_file_path else { return };
+
+        let prune_target_block = tip_block_number.saturating_sub(RECENT_BLOCKS_KEPT as u64);
+        let mut range_start =
+            find_fixed_range(prune_target_block, DEFAULT_BLOCKS_PER_STATIC_FILE).start();
+        if range_start == 0 {
+            return
+        }
+
+        debug!(
+            target: "pruner",
+            %tip_block_number,
+            "Ancient blocks file pruning started",
+        );
+
+        while range_start > 0 {
+            let range = find_fixed_range(range_start - 1, DEFAULT_BLOCKS_PER_STATIC_FILE);
+
+            for segment in [
+                StaticFileSegment::Headers,
+                StaticFileSegment::Transactions,
+                StaticFileSegment::Receipts,
+            ] {
+                let path = static_file_path.join(segment.filename(&range));
+
+                if path.exists() {
+                    delete_static_files(&path);
+                } else {
+                    debug!(target: "pruner", path = %path.display(), "Static file not found, skipping");
+                    break
+                }
+            }
+
+            range_start = range.start();
+        }
+
+        debug!(
+            target: "pruner",
+            %tip_block_number,
+            "Ancient blocks file pruning finished",
+        );
+    }
+}
+
+fn delete_static_files(path: &Path) {
+    // Delete the main file
+    if let Err(err) = fs::remove_file(path) {
+        debug!(target: "pruner", path = %path.display(), %err, "Failed to remove file");
+    } else {
+        debug!(target: "pruner", path = %path.display(), "Removed file");
+    }
+
+    // Delete the .conf file
+    let conf_path = path.with_extension("conf");
+    if let Err(err) = fs::remove_file(&conf_path) {
+        debug!(target: "pruner", path = %conf_path.display(), %err, "Failed to remove .conf file");
+    } else {
+        debug!(target: "pruner", path = %conf_path.display(), "Removed .conf file");
+    }
+
+    // Delete the .off file
+    let off_path = path.with_extension("off");
+    if let Err(err) = fs::remove_file(&off_path) {
+        debug!(target: "pruner", path = %off_path.display(), %err, "Failed to remove .off file");
+    } else {
+        debug!(target: "pruner", path = %off_path.display(), "Removed .off file");
+    }
 }
 
 impl<PF> Pruner<PF::ProviderRW, PF>
@@ -346,8 +435,15 @@ mod tests {
         let (finished_exex_height_tx, finished_exex_height_rx) =
             tokio::sync::watch::channel(FinishedExExHeight::NoExExs);
 
-        let mut pruner =
-            Pruner::new_with_factory(provider_factory, vec![], 5, 0, None, finished_exex_height_rx);
+        let mut pruner = Pruner::new_with_factory(
+            provider_factory,
+            vec![],
+            5,
+            0,
+            None,
+            finished_exex_height_rx,
+            None,
+        );
 
         // No last pruned block number was set before
         let first_block_number = 1;

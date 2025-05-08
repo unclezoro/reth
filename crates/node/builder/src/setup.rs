@@ -37,6 +37,7 @@ pub fn build_networked_pipeline<N, Client, Executor>(
     static_file_producer: StaticFileProducer<ProviderFactory<N>>,
     executor: Executor,
     exex_manager_handle: ExExManagerHandle<N::Primitives>,
+    skip_state_root_validation: bool,
 ) -> eyre::Result<Pipeline<N>>
 where
     N: ProviderNodeTypes,
@@ -64,6 +65,7 @@ where
         static_file_producer,
         executor,
         exex_manager_handle,
+        skip_state_root_validation,
     )?;
 
     Ok(pipeline)
@@ -83,6 +85,7 @@ pub fn build_pipeline<N, H, B, Executor>(
     static_file_producer: StaticFileProducer<ProviderFactory<N>>,
     executor: Executor,
     exex_manager_handle: ExExManagerHandle<N::Primitives>,
+    skip_state_root_validation: bool,
 ) -> eyre::Result<Pipeline<N>>
 where
     N: ProviderNodeTypes,
@@ -114,6 +117,7 @@ where
                 executor.clone(),
                 stage_config.clone(),
                 prune_modes,
+                skip_state_root_validation,
             )
             .set(ExecutionStage::new(
                 executor,

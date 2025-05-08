@@ -148,6 +148,9 @@ pub struct NodeConfig<ChainSpec> {
 
     /// All engine related arguments
     pub engine: EngineArgs,
+
+    /// Disable hashing stages to skip merkle tree building
+    pub skip_state_root_validation: bool,
 }
 
 impl NodeConfig<ChainSpec> {
@@ -177,6 +180,7 @@ impl<ChainSpec> NodeConfig<ChainSpec> {
             pruning: PruningArgs::default(),
             datadir: DatadirArgs::default(),
             engine: EngineArgs::default(),
+            skip_state_root_validation: false,
         }
     }
 
@@ -473,6 +477,7 @@ impl<ChainSpec> NodeConfig<ChainSpec> {
             dev: self.dev,
             pruning: self.pruning,
             engine: self.engine,
+            skip_state_root_validation: self.skip_state_root_validation,
         }
     }
 }
@@ -500,6 +505,7 @@ impl<ChainSpec> Clone for NodeConfig<ChainSpec> {
             pruning: self.pruning.clone(),
             datadir: self.datadir.clone(),
             engine: self.engine.clone(),
+            skip_state_root_validation: self.skip_state_root_validation.clone(),
         }
     }
 }

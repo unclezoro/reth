@@ -120,6 +120,7 @@ impl<C: ChainSpecParser<ChainSpec: EthChainSpec + EthereumHardforks>> Command<C>
                     NoopConsensus::arc(),
                     config.stages,
                     prune_modes.clone(),
+                    self.env.performance_optimization.skip_state_root_validation,
                 )
                 .builder()
                 .disable(reth_stages::StageId::SenderRecovery),
@@ -135,6 +136,7 @@ impl<C: ChainSpecParser<ChainSpec: EthChainSpec + EthereumHardforks>> Command<C>
                     executor.clone(),
                     stage_conf.clone(),
                     prune_modes.clone(),
+                    self.env.performance_optimization.skip_state_root_validation,
                 )
                 .set(ExecutionStage::new(
                     executor,

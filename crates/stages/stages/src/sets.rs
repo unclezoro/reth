@@ -31,7 +31,7 @@
 //!     StaticFileProducer::new(provider_factory.clone(), PruneModes::default());
 //! // Build a pipeline with all offline stages.
 //! let pipeline = Pipeline::<MockNodeTypesWithDB>::builder()
-//!     .add_stages(OfflineStages::new(exec, Arc::new(consensus), StageConfig::default(), PruneModes::default()))
+//!     .add_stages(OfflineStages::new(exec, Arc::new(consensus), StageConfig::default(), PruneModes::default(), false))
 //!     .build(provider_factory, static_file_producer);
 //!
 //! # }
@@ -96,6 +96,8 @@ where
     stages_config: StageConfig,
     /// Prune configuration for every segment that can be pruned
     prune_modes: PruneModes,
+    /// Disable hashing stages(`Merkle`, `AccountHashing`, `StorageHashing`)
+    skip_state_root_validation: bool,
 }
 
 impl<Provider, H, B, E> DefaultStages<Provider, H, B, E>
@@ -115,6 +117,7 @@ where
         executor_provider: E,
         stages_config: StageConfig,
         prune_modes: PruneModes,
+        skip_state_root_validation: bool,
     ) -> Self {
         Self {
             online: OnlineStages::new(
@@ -129,6 +132,7 @@ where
             consensus,
             stages_config,
             prune_modes,
+            skip_state_root_validation,
         }
     }
 }
@@ -146,13 +150,20 @@ where
         consensus: Arc<dyn FullConsensus<E::Primitives, Error = ConsensusError>>,
         stages_config: StageConfig,
         prune_modes: PruneModes,
+        skip_state_root_validation: bool,
     ) -> StageSetBuilder<Provider>
     where
         OfflineStages<E>: StageSet<Provider>,
     {
         StageSetBuilder::default()
             .add_set(default_offline)
-            .add_set(OfflineStages::new(executor_provider, consensus, stages_config, prune_modes))
+            .add_set(OfflineStages::new(
+                executor_provider,
+                consensus,
+                stages_config,
+                prune_modes,
+                skip_state_root_validation,
+            ))
             .add_stage(FinishStage)
     }
 }
@@ -173,6 +184,7 @@ where
             self.consensus,
             self.stages_config.clone(),
             self.prune_modes,
+            self.skip_state_root_validation,
         )
     }
 }
@@ -303,6 +315,8 @@ pub struct OfflineStages<E: BlockExecutorProvider> {
     stages_config: StageConfig,
     /// Prune configuration for every segment that can be pruned
     prune_modes: PruneModes,
+    /// Disable hashing stages(`Merkle`, `AccountHashing`, `StorageHashing`)
+    disable_hashing: bool,
 }
 
 impl<E: BlockExecutorProvider> OfflineStages<E> {
@@ -312,8 +326,9 @@ impl<E: BlockExecutorProvider> OfflineStages<E> {
         consensus: Arc<dyn FullConsensus<E::Primitives, Error = ConsensusError>>,
         stages_config: StageConfig,
         prune_modes: PruneModes,
+        disable_hashing: bool,
     ) -> Self {
-        Self { executor_provider, consensus, stages_config, prune_modes }
+        Self { executor_provider, consensus, stages_config, prune_modes, disable_hashing }
     }
 }
 
@@ -333,7 +348,11 @@ where
             .add_stage_opt(self.prune_modes.sender_recovery.map(|prune_mode| {
                 PruneSenderRecoveryStage::new(prune_mode, self.stages_config.prune.commit_threshold)
             }))
-            .add_set(HashingStages { stages_config: self.stages_config.clone() })
+            .add_set_opt(
+                self.disable_hashing
+                    .not()
+                    .then(|| HashingStages { stages_config: self.stages_config.clone() }),
+            )
             .add_set(HistoryIndexingStages {
                 stages_config: self.stages_config.clone(),
                 prune_modes: self.prune_modes.clone(),

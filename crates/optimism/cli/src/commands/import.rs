@@ -103,6 +103,7 @@ impl<C: ChainSpecParser<ChainSpec = OpChainSpec>> ImportOpCommand<C> {
                 StaticFileProducer::new(provider_factory.clone(), PruneModes::default()),
                 true,
                 OpExecutorProvider::optimism(provider_factory.chain_spec()),
+                self.env.performance_optimization.skip_state_root_validation,
             )?;
 
             // override the tip

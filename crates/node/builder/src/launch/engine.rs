@@ -165,6 +165,7 @@ where
             static_file_producer,
             ctx.components().block_executor().clone(),
             pipeline_exex_handle,
+            ctx.node_config().skip_state_root_validation,
         )?;
 
         // The new engine writes directly to static files. This ensures that they're up to the tip.
@@ -229,6 +230,7 @@ where
                 ctx.dev_mining_mode(ctx.components().pool()),
                 LocalPayloadAttributesBuilder::new(ctx.chain_spec()),
                 ctx.components().evm_config().clone(),
+                ctx.node_config().skip_state_root_validation,
             );
 
             Either::Left(eth_service)
@@ -250,6 +252,7 @@ where
                 ctx.invalid_block_hook()?,
                 ctx.sync_metrics_tx(),
                 ctx.components().evm_config().clone(),
+                ctx.node_config().skip_state_root_validation,
             );
 
             Either::Right(eth_service)

@@ -421,6 +421,7 @@ where
                     NoopBlockExecutorProvider::<N::Primitives>::default(),
                     self.toml_config().stages.clone(),
                     self.prune_modes(),
+                    self.node_config().skip_state_root_validation,
                 ))
                 .build(
                     factory.clone(),
